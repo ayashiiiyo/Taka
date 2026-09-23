@@ -1,0 +1,9 @@
+node_modules/
+database/*.db*
+database/*.sqlite*
+tmp/
+.env
+.npm/
+.DS_Store
+*.log
+cookies.txt
