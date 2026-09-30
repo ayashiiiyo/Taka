@@ -3,7 +3,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { serializeMessage } from './lib/simple.js'
 import { printMessage } from './print.js'
-import { getUser, getSetting } from './database/dbuser.js'
+import { getUser, getSetting, recordChat } from './database/dbuser.js'
 import { isOwner } from './config.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -293,6 +293,7 @@ export async function handler(conn, event) {
   if (!event.message) return
   const m = serializeMessage(conn, event)
   getUser(m.sender, m.pushName)
+  if (m.chat) recordChat(m.chat, m.isGroup)
   handleAutoread(m)
   const parsed = parseCommand(m.text, global.prefix)
   const stopped = await runBefore(conn, m, parsed)

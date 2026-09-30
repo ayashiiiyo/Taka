@@ -1,6 +1,8 @@
 global.botName = 'Takashi'
 global.namebot = 'Takashi'
-global.pairing = true
+global.pairing = false
+global.browser = 'safari'
+global.device = 'iPhone 17 Pro Max'
 global.owner = ['Takashi', '6285842624025']
 global.ownerLids = new Set()
 global.bot = '6285842624025@s.whatsapp.net'

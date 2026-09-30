@@ -1,26 +1,28 @@
 import './config.js'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { mkdirSync } from 'fs'
+import { mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'fs'
 import { createStore, WaClient, ConsoleLogger } from 'zapo-js'
 import { createSqliteStore } from '@zapo-js/store-sqlite'
 import { createMediaProcessor } from '@zapo-js/media-utils'
 import qrcode from 'qrcode-terminal'
 import { wrapClient } from './lib/simple.js'
+import { createNativeSqliteConnection } from './lib/sqlite-adapter.js'
 import { handler, loadPlugins, watchPlugins, invalidateGroupCache } from './handler.js'
 import { syncOwnerLids } from './config.js'
 import { getSetting } from './database/dbuser.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const sessionDir = join(__dirname, 'database')
+const sessionDir = join(__dirname, 'sessions')
 mkdirSync(sessionDir, { recursive: true })
+
+const sessionConnection = createNativeSqliteConnection(join(sessionDir, 'session.sqlite'))
 
 const store = createStore({
   cacheLayer: true,
   backends: {
     sqlite: createSqliteStore({
-      path: join(sessionDir, 'session.sqlite'),
-      driver: 'auto',
+      connection: sessionConnection,
       cacheTtlMs: {
         groupMetadataMs: 5 * 60_000,
         chatMetadataMs: 60 * 60_000,
@@ -54,8 +56,8 @@ export const conn = new WaClient({
   store,
   sessionId: 'takav2',
   recoverFromClientTooOld: true,
-  deviceBrowser: 'safari',
-  deviceOsDisplayName: 'iPhone 16 Pro',
+  deviceBrowser: global.browser || 'safari',
+  deviceOsDisplayName: global.device || 'iPhone 17 Pro Max',
   deviceOsVersion: '18.0',
   media: {
     processor: createMediaProcessor(),
@@ -72,9 +74,18 @@ export const conn = new WaClient({
 
 wrapClient(conn)
 
+let pairingRequested = false
+
 function handleQr(qr) {
-  console.log('[INFO] QR Code :')
-  qrcode.generate(qr, { small: true })
+  if (global.pairing) {
+    if (!pairingRequested && global.pairingNumber) {
+      pairingRequested = true
+      requestPairingCode(conn, global.pairingNumber)
+    }
+  } else {
+    console.log('[INFO] QR Code :')
+    qrcode.generate(qr, { small: true })
+  }
 }
 
 function handlePairingCode(code) {
@@ -84,12 +95,18 @@ function handlePairingCode(code) {
 
 async function requestPairingCode(c, phone) {
   if (!phone) return
-  const code = await c.auth.requestPairingCode(phone.replace(/\D/g, ''))
-  handlePairingCode(code)
+  try {
+    const code = await c.auth.requestPairingCode(phone.replace(/\D/g, ''))
+    handlePairingCode(code)
+  } catch (e) {
+    pairingRequested = false
+    console.log(`[PAIRING ERROR] ${e?.message || e}`)
+  }
 }
 
 function checkOpen(status) {
   if (status === 'open') {
+    pairingRequested = false
     console.log('[INFO] Connection open')
     syncOwnerLids(conn)
   }
@@ -164,15 +181,11 @@ export async function connect() {
   }
 }
 
-conn.on('auth_qr', ({ qr }) => {
-  if (!global.pairing) handleQr(qr)
-})
+conn.on('auth_qr', ({ qr }) => handleQr(qr))
 conn.on('auth_pairing_required', () => {
   if (global.pairing) requestPairingCode(conn, global.pairingNumber)
 })
-conn.on('auth_pairing_code', ({ code }) => {
-  if (global.pairing) handlePairingCode(code)
-})
+conn.on('auth_pairing_code', ({ code }) => handlePairingCode(code))
 conn.on('auth_paired', ({ credentials }) => {
   console.log(`[INFO] Paired as ${credentials?.meJid}`)
   syncOwnerLids(conn)
@@ -183,7 +196,28 @@ conn.on('call', handleCall)
 conn.on('message_addon', handleMessageAddon)
 conn.on('message', (event) => handler(conn, event))
 
+function cleanupTmpDir() {
+  const tmpDir = join(__dirname, 'tmp')
+  if (!existsSync(tmpDir)) return
+  const now = Date.now()
+  const maxAgeMs = 10 * 60 * 1000
+  try {
+    const files = readdirSync(tmpDir)
+    for (const file of files) {
+      const fullPath = join(tmpDir, file)
+      try {
+        const stat = statSync(fullPath)
+        if (stat.isFile() && (now - stat.mtimeMs > maxAgeMs || (file.endsWith('.part') && now - stat.mtimeMs > 3 * 60 * 1000))) {
+          unlinkSync(fullPath)
+        }
+      } catch {}
+    }
+  } catch {}
+}
+
 export async function init() {
+  cleanupTmpDir()
+  setInterval(cleanupTmpDir, 10 * 60 * 1000)
   await loadPlugins()
   watchPlugins()
   await connect()

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3'
+import { DatabaseSync } from 'node:sqlite'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { mkdirSync } from 'fs'
@@ -6,12 +6,12 @@ import { mkdirSync } from 'fs'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 mkdirSync(__dirname, { recursive: true })
 
-export const db = new Database(join(__dirname, 'dbusr.db'))
+export const db = new DatabaseSync(join(__dirname, 'dbusr.db'))
 
-db.pragma('journal_mode = WAL')
-db.pragma('synchronous = NORMAL')
-db.pragma('temp_store = MEMORY')
-db.pragma('cache_size = -64000')
+db.exec('PRAGMA journal_mode = WAL')
+db.exec('PRAGMA synchronous = NORMAL')
+db.exec('PRAGMA temp_store = MEMORY')
+db.exec('PRAGMA cache_size = -64000')
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -33,14 +33,19 @@ db.exec(`
     antilink INTEGER DEFAULT 0,
     antilink_links TEXT DEFAULT '[]'
   );
+  CREATE TABLE IF NOT EXISTS chats (
+    id TEXT PRIMARY KEY,
+    is_group INTEGER DEFAULT 0,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+  );
 `)
 
 const getStmt = db.prepare('SELECT * FROM users WHERE id = ?')
 const insertStmt = db.prepare('INSERT INTO users (id, name) VALUES (?, ?)')
 const updateStmt = db.prepare(`
   UPDATE users 
-  SET name = @name, limit_count = @limit_count, exp = @exp, level = @level, registered = @registered, banned = @banned 
-  WHERE id = @id
+  SET name = ?, limit_count = ?, exp = ?, level = ?, registered = ?, banned = ? 
+  WHERE id = ?
 `)
 
 const getSettingStmt = db.prepare('SELECT value FROM settings WHERE id = ?')
@@ -50,9 +55,13 @@ const getGroupStmt = db.prepare('SELECT * FROM groups WHERE id = ?')
 const insertGroupStmt = db.prepare('INSERT INTO groups (id) VALUES (?)')
 const updateGroupStmt = db.prepare(`
   UPDATE groups 
-  SET antilink = @antilink, antilink_links = @antilink_links 
-  WHERE id = @id
+  SET antilink = ?, antilink_links = ? 
+  WHERE id = ?
 `)
+
+const insertChatStmt = db.prepare('INSERT INTO chats (id, is_group) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET updated_at = strftime(\'%s\', \'now\')')
+const getChatsStmt = db.prepare('SELECT id, is_group FROM chats')
+const clearChatsStmt = db.prepare('DELETE FROM chats')
 
 const userCache = new Map()
 const settingsCache = new Map()
@@ -76,7 +85,15 @@ export function getUser(id, name = '') {
 export function updateUser(id, data = {}) {
   const current = getUser(id)
   const updated = { ...current, ...data, id }
-  updateStmt.run(updated)
+  updateStmt.run(
+    updated.name || '',
+    updated.limit_count !== undefined ? updated.limit_count : 20,
+    updated.exp || 0,
+    updated.level || 0,
+    updated.registered ? 1 : 0,
+    updated.banned ? 1 : 0,
+    id
+  )
   userCache.set(id, updated)
   return updated
 }
@@ -144,7 +161,7 @@ export function updateGroup(id, data = {}) {
     antilink: data.antilink !== undefined ? (data.antilink ? 1 : 0) : (current.antilink ? 1 : 0),
     antilink_links: JSON.stringify(data.antilink_links !== undefined ? data.antilink_links : current.antilink_links)
   }
-  updateGroupStmt.run(updated)
+  updateGroupStmt.run(updated.antilink, updated.antilink_links, id)
   let parsedLinks = []
   try {
     parsedLinks = typeof updated.antilink_links === 'string' ? JSON.parse(updated.antilink_links) : updated.antilink_links
@@ -180,4 +197,17 @@ export function removeAntilink(id, link) {
   const clean = String(link || '').trim()
   const links = (group.antilink_links || []).filter(l => l.toLowerCase() !== clean.toLowerCase())
   return updateGroup(id, { antilink_links: links })
+}
+
+export function recordChat(id, isGroup = false) {
+  if (!id || id.endsWith('@newsletter') || id === '0@s.whatsapp.net') return
+  insertChatStmt.run(id, isGroup ? 1 : 0)
+}
+
+export function getAllRecordedChats() {
+  return getChatsStmt.all()
+}
+
+export function clearRecordedChats() {
+  clearChatsStmt.run()
 }

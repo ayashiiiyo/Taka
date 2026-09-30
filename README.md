@@ -55,7 +55,7 @@ Fitur antilink berjalan otomatis di latar belakang lewat middleware `handler.bef
 - **Admin & Owner:** Bebas menghapus pesan bot maupun pesan anggota lain.
 
 ### 💾 7. Database SQLite dengan In-Memory Caching
-Semua data pengguna (limit, exp, level) dan konfigurasi grup disimpan secara terstruktur di database SQLite lokal (`better-sqlite3`). Dilengkapi layer cache memori cerdas sehingga lalu lintas pesan yang padat tidak membebani query database.
+Semua data pengguna (limit, exp, level) dan konfigurasi grup disimpan secara terstruktur di database SQLite lokal native (`node:sqlite`). Dilengkapi layer cache memori cerdas sehingga lalu lintas pesan yang padat tidak membebani query database.
 
 ### 🔄 8. Hot-Reload Plugins Otomatis
 Mau menambah fitur baru atau memperbaiki kode plugin? Cukup simpan file di folder `plugins/`. Sistem watcher Taka akan langsung memuat perubahan secara real-time tanpa perlu me-restart bot!
@@ -132,6 +132,7 @@ Taka berjalan di dalam Node.js Worker Thread dengan proteksi batas memori (`reso
 | `> <kode>` | Jalankan blok kode JavaScript di runtime bot |
 | `.execute <kode>` | Jalankan script Node.js melalui child process |
 | `.setppbot <reply foto>` | Ganti foto profil akun bot WhatsApp |
+| `.clch [pc/gc/here]` | Bersihkan riwayat chat pribadi (PC) dan grup (GC) |
 | `.enable` / `.disable` | Toggle fitur global (welcome, goodbye, autoread, gconly) |
 | `.restart` | Restart bot worker thread |
 </details>
@@ -179,6 +180,8 @@ Buka file `config.js` dan sesuaikan data bot kamu:
 global.botName = 'Takashi'
 global.namebot = 'Takashi'
 global.pairing = true
+global.browser = 'safari'
+global.device = 'iPhone 17 Pro Max'
 global.owner = ['Takashi', '6285842624025']
 global.bot = '6285842624025@s.whatsapp.net'
 global.pairingNumber = '6285842624025'
@@ -191,6 +194,8 @@ global.prefix = /^[.#!]/
 | Opsi | Penjelasan |
 | :--- | :--- |
 | **`pairing`** | `true` untuk login via **Pairing Code** (kode 8 digit muncul di terminal), atau `false` untuk login via scan **QR Code**. |
+| **`browser`** | Identitas browser yang diiklankan ke WhatsApp (default: `'safari'`). |
+| **`device`** | Nama perangkat yang terdeteksi di WhatsApp (default: `'iPhone 17 Pro Max'`). |
 | **`pairingNumber`** | Nomor WhatsApp bot kamu (gunakan kode negara tanpa tanda `+`, contoh: `6285842624025`). |
 | **`owner`** | Format nama dan nomor pemilik bot `['NamaOwner', 'NomorOwner']`. |
 | **`prefix`** | Karakter awalan perintah (mendukung `.`, `#`, dan `!`). |

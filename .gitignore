@@ -1,6 +1,7 @@
 node_modules/
 database/*.db*
 database/*.sqlite*
+sessions/
 tmp/
 .env
 .npm/

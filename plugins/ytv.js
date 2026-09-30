@@ -9,6 +9,7 @@ export function downloadYT(url) {
     fs.mkdirSync('tmp', { recursive: true })
 
     const ytdlp = spawn('yt-dlp', [
+      '--no-playlist',
       '--remote-components', 'ejs:github',
       '--js-runtimes', 'node',
       ...(fs.existsSync('cookies.txt') ? ['--cookies', 'cookies.txt'] : []),

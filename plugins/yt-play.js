@@ -20,6 +20,7 @@ function downloadAudio(url) {
     fs.mkdirSync('tmp', { recursive: true })
 
     const dl = spawn('yt-dlp', [
+      '--no-playlist',
       '--remote-components', 'ejs:github',
       '--js-runtimes', 'node',
       ...(fs.existsSync('cookies.txt') ? ['--cookies', 'cookies.txt'] : []),

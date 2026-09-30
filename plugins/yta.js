@@ -4,6 +4,7 @@ import fs from 'fs'
 function getInfo(url) {
   return new Promise((resolve, reject) => {
     const args = [
+      '--no-playlist',
       '--remote-components', 'ejs:github',
       '--js-runtimes', 'node',
       ...(fs.existsSync('cookies.txt') ? ['--cookies', 'cookies.txt'] : []),
@@ -34,6 +35,7 @@ function downloadAudio(url) {
     fs.mkdirSync('tmp', { recursive: true })
 
     const dl = spawn('yt-dlp', [
+      '--no-playlist',
       '--remote-components', 'ejs:github',
       '--js-runtimes', 'node',
       ...(fs.existsSync('cookies.txt') ? ['--cookies', 'cookies.txt'] : []),
