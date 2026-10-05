@@ -22,7 +22,7 @@ let handler = async (m, { args, command, usedPrefix }) => {
       }
       const link = args[1].trim()
       addAntilink(m.chat, link)
-      return m.reply(`Berhasil menambahkan link "${link}" ke daftar antilink`)
+      return m.reply(`Berhasil menambahkan link '${link}' ke daftar antilink`)
     }
 
     case 'delete':
@@ -33,7 +33,7 @@ let handler = async (m, { args, command, usedPrefix }) => {
       }
       const link = args[1].trim()
       removeAntilink(m.chat, link)
-      return m.reply(`Berhasil menghapus link "${link}" dari daftar antilink`)
+      return m.reply(`Berhasil menghapus link '${link}' dari daftar antilink`)
     }
 
     default: {

@@ -44,7 +44,7 @@ let handler = async (m, { conn, args, usedPrefix: prefix, plugins }) => {
 
     if (!found.length) {
       caption = `
-Kategori menu "${tag}" tidak ditemukan.
+Kategori menu '${tag}' tidak ditemukan.
 Gunakan *.menu* tanpa tag untuk melihat semua kategori.`.trim()
     } else {
       const list = found.map(cmd => `\`\`\`› ${prefix}${cmd}\`\`\``).join('\n')

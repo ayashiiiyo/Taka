@@ -164,26 +164,59 @@ export async function toStickerWebp(buffer) {
 	}
 }
 
+async function extractFrameBuffer(data) {
+	const tmpIn = randomName('tmp');
+	const tmpOut = randomName('png');
+	await fs.promises.writeFile(tmpIn, data);
+	try {
+		await new Promise((resolve, reject) => {
+			execFile('ffmpeg', ['-y', '-i', tmpIn, '-vframes', '1', tmpOut], (err) => {
+				if (err) return reject(err);
+				resolve(true);
+			});
+		});
+		return await fs.promises.readFile(tmpOut);
+	} finally {
+		await Promise.all([unlink(tmpIn), unlink(tmpOut)]);
+	}
+}
+
 export async function toTrayPng(buffer) {
-	const data = toBuffer(buffer);
+	let data = toBuffer(buffer);
 	try {
 		return await sharp(data)
 			.resize(96, 96, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
 			.png()
 			.toBuffer();
 	} catch {
-		return data;
+		try {
+			const frame = await extractFrameBuffer(data);
+			return await sharp(frame)
+				.resize(96, 96, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+				.png()
+				.toBuffer();
+		} catch {
+			return data;
+		}
 	}
 }
 
 export async function toCoverJpeg(buffer) {
-	const data = toBuffer(buffer);
+	let data = toBuffer(buffer);
 	try {
 		return await sharp(data)
 			.resize(252, 252, { fit: 'cover' })
 			.jpeg({ quality: 85 })
 			.toBuffer();
 	} catch {
-		return data;
+		try {
+			const frame = await extractFrameBuffer(data);
+			return await sharp(frame)
+				.resize(252, 252, { fit: 'cover' })
+				.jpeg({ quality: 85 })
+				.toBuffer();
+		} catch {
+			return data;
+		}
 	}
 }

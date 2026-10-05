@@ -28,7 +28,7 @@ async function downloadTelegramBuffer(token, fileId) {
 
 async function processStickers(rawStickers, set, packTitle, startIdx = 1) {
   const processed = []
-  const batchSize = 5
+  const batchSize = 10
 
   for (let i = 0; i < rawStickers.length; i += batchSize) {
     const batch = rawStickers.slice(i, i + batchSize)
@@ -69,7 +69,8 @@ async function processStickers(rawStickers, set, packTitle, startIdx = 1) {
           return {
             media: exifSticker,
             fileName: `sticker_${index}.webp`,
-            emojis: [stk.emoji || '✨']
+            emojis: [stk.emoji || '✨'],
+            isAnimated: Boolean(isVideo)
           }
         } catch {
           return null
@@ -91,13 +92,14 @@ let handler = async (m, { conn, args, command }) => {
     if (!url) {
       return m.reply(
         `*Example Use :* .${command} https://t.me/addstickers/Animals\n\n` +
-        `*Note :* Support nama pack & pilihan part (Contoh: .${command} Animals 2)`
+        `*Note :* Support nama pack & pilihan part (Contoh: .${command} Animals 2 atau .${command} Animals all)`
       )
     }
 
     const packName = extractPackName(url)
     if (!packName) throw new Error('Format link atau nama pack Telegram tidak valid.')
 
+    const isAllParts = args[1]?.toLowerCase() === 'all'
     const requestedPart = args[1] && /^\d+$/.test(args[1]) ? parseInt(args[1], 10) : null
 
     m.reply(global.wait)
@@ -106,12 +108,12 @@ let handler = async (m, { conn, args, command }) => {
     const setData = await setRes.json()
 
     if (!setData.ok || !setData.result) {
-      throw new Error(`Sticker pack "${packName}" tidak ditemukan di Telegram.`)
+      throw new Error(`Sticker pack '${packName}' tidak ditemukan di Telegram.`)
     }
 
     const set = setData.result
     if (!Array.isArray(set.stickers) || set.stickers.length === 0) {
-      throw new Error(`Sticker pack "${set.title || packName}" tidak memiliki stiker.`)
+      throw new Error(`Sticker pack '${set.title || packName}' tidak memiliki stiker.`)
     }
 
     const PART_SIZE = 30
@@ -131,7 +133,7 @@ let handler = async (m, { conn, args, command }) => {
 
     const partsToSend = requestedPart !== null
       ? [requestedPart]
-      : Array.from({ length: totalParts }, (_, i) => i + 1)
+      : (isAllParts ? Array.from({ length: totalParts }, (_, i) => i + 1) : [1])
 
     let sentCount = 0
     let totalSentStickers = 0
@@ -175,11 +177,16 @@ let handler = async (m, { conn, args, command }) => {
       info = `✅ Berhasil mengunduh *${set.title}* (Part ${requestedPart}/${totalParts})!\n` +
         `📦 Jumlah: ${totalSentStickers} stiker\n` +
         `👤 Publisher: ${set.name}`
-    } else if (totalParts > 1) {
+    } else if (isAllParts && totalParts > 1) {
       info = `✅ Berhasil mengunduh semua part *${set.title}*!\n` +
         `📦 Total stiker: ${totalSentStickers} / ${totalStickers}\n` +
         `📑 Total part: ${totalParts} part terkirim\n` +
         `👤 Publisher: ${set.name}`
+    } else if (totalParts > 1) {
+      info = `✅ Berhasil mengunduh *${set.title}* (Part 1/${totalParts})!\n` +
+        `📦 Jumlah: ${totalSentStickers} stiker\n` +
+        `👤 Publisher: ${set.name}\n\n` +
+        `💡 _Pack ini memiliki ${totalParts} part. Untuk part berikutnya ketik:_ \`.${command} ${packName} 2\` _atau ketik:_ \`.${command} ${packName} all\``
     } else {
       info = `✅ Berhasil mengunduh *${set.title}*!\n` +
         `📦 Total: ${totalSentStickers} stiker\n` +

@@ -29,7 +29,11 @@ Ditenagai oleh library mutakhir **`zapo-js`**, Taka tidak hanya tangguh melayani
 ## ✨ Kenapa Harus Taka? Ini Keunggulannya!
 
 ### ⚡ 1. Super Cepat & Zero-Disk I/O
-Pemrosesan stiker WebP (512x512), cover thumbnail JPEG, ikon baki PNG, dan thumbnail video/foto diproses **100% langsung di memori RAM** menggunakan native C++ binding `sharp`. Server atau VPS kamu terbebas dari siklus baca-tulis disk berlebihan (*Zero-Disk I/O*).
+Pemrosesan stiker WebP (512x512), cover thumbnail JPEG, ikon baki PNG, dan thumbnail video/foto diproses **100% langsung di memori RAM** menggunakan native C++ binding `sharp` dan `skia-canvas`. Server atau VPS kamu terbebas dari siklus baca-tulis disk berlebihan (*Zero-Disk I/O*).
+
+### 🚀 2. Optimasi Performa & Zero-History Overhead
+- **Disabled History Sync:** Menghemat pemakaian kuota/bandwidth, CPU, dan lonjakan RAM saat startup dengan menonaktifkan parsing riwayat chat WhatsApp lama.
+- **Robust Pairing Lifecycle:** Logika request pairing code terlindungi dari *race condition* dan *double-emission*, menjamin proses koneksi via kode telepon berjalan mulus dan stabil.
 
 ### 🔘 2. WhatsApp Native Flow Interactive Buttons
 Taka hadir dengan tombol interaktif generasi terbaru:
@@ -78,7 +82,10 @@ Taka berjalan di dalam Node.js Worker Thread dengan proteksi batas memori (`reso
 | :--- | :--- |
 | `.s` / `.sticker` | Buat stiker dari foto, video pendek, atau reply album foto |
 | `.wm` / `.swm <pack\|author>` | Buat stiker dengan watermark nama pack dan author kustom |
-| `.sticktele <url_telegram>` | Download dan konversi sticker pack dari Telegram langsung ke WhatsApp |
+| `.brat <teks>` / `.brat2 <teks>` | Buat stiker Brat estetik dengan Apple Emoji & Arial Narrow |
+| `.qc <teks>` | Buat fake quote chat ala iMessage/iOS dengan gelembung chat estetik |
+| `.sticktele <url_telegram>` | Download dan konversi sticker pack dari Telegram (support part & all part) |
+| `.tovideo` | Ubah stiker animasi WebP atau GIF menjadi video MP4 jernih |
 </details>
 
 <details open>
@@ -87,7 +94,11 @@ Taka berjalan di dalam Node.js Worker Thread dengan proteksi batas memori (`reso
 | Perintah | Deskripsi |
 | :--- | :--- |
 | `.tt` / `.tiktok <url>` | Unduh video TikTok tanpa watermark atau slide foto TikTok |
-| `.ig` / `.igdl <url>` | Unduh Reel, video, atau carousel post dari Instagram |
+| `.ig` / `.igdl <url>` | Unduh Reel, video, atau carousel post dari Instagram (SaveFrom) |
+| `.fb` / `.fbdl <url>` | Unduh video Facebook kualitas HD/SD beserta audio |
+| `.x` / `.twitter <url>` | Unduh video & gambar dari Twitter / X |
+| `.soundcloud` / `.scdl <url>` | Unduh lagu dari SoundCloud lengkap dengan thumbnail cover & metadata |
+| `.gdrive <url>` | Unduh file langsung dari tautan Google Drive |
 | `.play <judul>` | Cari dan putar lagu dari YouTube langsung jadi audio |
 | `.yta <url>` | Unduh audio video YouTube dalam format MP3 |
 | `.ytv <url>` | Unduh video YouTube kualitas jernih MP4 |

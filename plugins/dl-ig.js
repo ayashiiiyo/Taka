@@ -1,18 +1,35 @@
-import fdown from '/root/Scraper/src/fdown.js'
+import { scrapeInstagram } from '../src/savefrom-ig.js'
 
 let handler = async (m, { args, command }) => {
   try {
-    if (!args[0]) throw new Error(`*Example :* .${command} https://www.instagram.com/reel/xxxx/`)
+    if (!args[0]) {
+      return m.reply(`*Example :* .${command} https://www.instagram.com/reel/xxxx/`)
+    }
 
     await m.reply(global.wait)
 
-    const result = await fdown.igdl(args[0])
+    const result = await scrapeInstagram(args[0])
     const mediaList = result?.media || []
-    if (!mediaList.length) throw new Error('Media tidak ditemukan')
+    if (!mediaList.length) {
+      throw new Error('Media tidak ditemukan')
+    }
 
-    for (const item of mediaList) {
-      if (item?.url) {
-        await (item.type === 'video' ? m.video(item.url) : m.image(item.url))
+    let mediaToSend = mediaList
+    if (mediaList.length > 1 && mediaList.every(i => i.subname && (i.type === 'mp4' || i.ext === 'mp4'))) {
+      mediaToSend = [mediaList[0]]
+    }
+
+    for (const item of mediaToSend) {
+      const url = typeof item === 'string' ? item : item?.url
+      if (!url) continue
+
+      const type = typeof item === 'object' ? (item.type || item.ext || '') : ''
+      const isVideo = type === 'mp4' || type === 'video' || url.includes('.mp4')
+
+      if (isVideo) {
+        await m.video(url)
+      } else {
+        await m.image(url)
       }
     }
   } catch (e) {

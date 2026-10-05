@@ -10,8 +10,8 @@ const userDbPath = join(__dirname, '../database/dbusr.db')
 function getSessionChats() {
   try {
     const db = new DatabaseSync(sessionDbPath, { readOnly: true })
-    const chats = db.prepare("SELECT DISTINCT chat_jid FROM chat_metadata_cache WHERE chat_jid != '0@s.whatsapp.net' AND chat_jid NOT LIKE '%@newsletter'").all().map(r => r.chat_jid)
-    const groups = db.prepare("SELECT DISTINCT group_jid FROM group_participants_cache").all().map(r => r.group_jid)
+    const chats = db.prepare(`SELECT DISTINCT chat_jid FROM chat_metadata_cache WHERE chat_jid != '0@s.whatsapp.net' AND chat_jid NOT LIKE '%@newsletter'`).all().map(r => r.chat_jid)
+    const groups = db.prepare(`SELECT DISTINCT group_jid FROM group_participants_cache`).all().map(r => r.group_jid)
     db.close()
     return { chats, groups }
   } catch {
@@ -22,7 +22,7 @@ function getSessionChats() {
 function getUserDbChats() {
   try {
     const db = new DatabaseSync(userDbPath, { readOnly: true })
-    const users = db.prepare("SELECT DISTINCT id FROM users WHERE id NOT LIKE '%@g.us' AND id NOT LIKE '%@newsletter' AND id != '0@s.whatsapp.net'").all().map(r => r.id)
+    const users = db.prepare(`SELECT DISTINCT id FROM users WHERE id NOT LIKE '%@g.us' AND id NOT LIKE '%@newsletter' AND id != '0@s.whatsapp.net'`).all().map(r => r.id)
     db.close()
     return users
   } catch {

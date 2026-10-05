@@ -55,6 +55,9 @@ const store = createStore({
 export const conn = new WaClient({
   store,
   sessionId: 'takav2',
+  history: {
+    enabled: false
+  },
   recoverFromClientTooOld: true,
   deviceBrowser: global.browser || 'safari',
   deviceOsDisplayName: global.device || 'iPhone 17 Pro Max',
@@ -74,46 +77,64 @@ export const conn = new WaClient({
 
 wrapClient(conn)
 
-let pairingRequested = false
+let isPairingInProgress = false
+let pairingCodeEmitted = false
+
+function normalizePhoneNumber(phone) {
+  let clean = String(phone || '').replace(/\D/g, '')
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.slice(1)
+  }
+  return clean
+}
 
 function handleQr(qr) {
-  if (global.pairing) {
-    if (!pairingRequested && global.pairingNumber) {
-      pairingRequested = true
-      requestPairingCode(conn, global.pairingNumber)
-    }
-  } else {
-    console.log('[INFO] QR Code :')
-    qrcode.generate(qr, { small: true })
-  }
+  if (global.pairing) return
+  console.log('[INFO] QR Code :')
+  qrcode.generate(qr, { small: true })
 }
 
 function handlePairingCode(code) {
+  pairingCodeEmitted = true
+  isPairingInProgress = false
   const formatted = code.match(/.{1,4}/g)?.join('-') || code
   console.log(`[INFO] Pairing Code : ${formatted}`)
 }
 
-async function requestPairingCode(c, phone) {
-  if (!phone) return
+async function triggerPairingCode(c, phone) {
+  const normalized = normalizePhoneNumber(phone)
+  if (!normalized || isPairingInProgress || pairingCodeEmitted) return
+  isPairingInProgress = true
+
   try {
-    const code = await c.auth.requestPairingCode(phone.replace(/\D/g, ''))
-    handlePairingCode(code)
+    console.log(`[INFO] Requesting pairing code for +${normalized}...`)
+    const code = await c.auth.requestPairingCode(normalized)
+    if (!pairingCodeEmitted && code) {
+      handlePairingCode(code)
+    }
   } catch (e) {
-    pairingRequested = false
-    console.log(`[PAIRING ERROR] ${e?.message || e}`)
+    isPairingInProgress = false
+    console.error(`[PAIRING ERROR] ${e?.message || e}`)
   }
 }
 
 function checkOpen(status) {
   if (status === 'open') {
-    pairingRequested = false
+    isPairingInProgress = false
+    pairingCodeEmitted = false
     console.log('[INFO] Connection open')
     syncOwnerLids(conn)
   }
 }
 
 function checkClose(status) {
-  if (status === 'close') reconnect()
+  if (status === 'close') {
+    isPairingInProgress = false
+    if (!conn.auth?.getCurrentCredentials()?.meJid) {
+      pairingCodeEmitted = false
+    }
+    reconnect()
+  }
 }
 
 function handleConnection(event) {
@@ -183,10 +204,12 @@ export async function connect() {
 
 conn.on('auth_qr', ({ qr }) => handleQr(qr))
 conn.on('auth_pairing_required', () => {
-  if (global.pairing) requestPairingCode(conn, global.pairingNumber)
+  if (global.pairing) triggerPairingCode(conn, global.pairingNumber)
 })
 conn.on('auth_pairing_code', ({ code }) => handlePairingCode(code))
 conn.on('auth_paired', ({ credentials }) => {
+  isPairingInProgress = false
+  pairingCodeEmitted = false
   console.log(`[INFO] Paired as ${credentials?.meJid}`)
   syncOwnerLids(conn)
 })
