@@ -109,6 +109,7 @@ Taka berjalan di dalam Node.js Worker Thread dengan proteksi batas memori (`reso
 
 | Perintah | Deskripsi |
 | :--- | :--- |
+| `.tourl` / `.tolink` / `.upload` | Unggah semua format media/file ke Cloud CDN (`cdn.takahasii.my.id`) instan direct download (maks 30MB) |
 | `.hd` / `.remini` | Tingkatkan kualitas dan ketajaman foto jadi super jernih |
 | `.rbg` / `.removebg` | Hapus latar belakang (background) gambar secara instan |
 | `.pin` / `.pinterest <query>` | Cari dan kirim foto dari Pinterest dalam bentuk album |
